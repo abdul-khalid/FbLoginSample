@@ -3,6 +3,7 @@ package com.example.abdulkhalid.fbloginsample;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,10 +16,16 @@ import com.facebook.CallbackManager;
 import com.facebook.FacebookCallback;
 import com.facebook.FacebookException;
 import com.facebook.FacebookSdk;
+import com.facebook.GraphRequest;
+import com.facebook.GraphResponse;
 import com.facebook.Profile;
 import com.facebook.ProfileTracker;
 import com.facebook.login.LoginResult;
 import com.facebook.login.widget.LoginButton;
+
+import org.json.JSONObject;
+
+import java.util.Arrays;
 
 /**
  * A placeholder fragment containing a simple view.
@@ -39,22 +46,45 @@ public class MainFragment extends Fragment {
 
         @Override
         public void onSuccess(LoginResult loginResult) {
+
             accessToken = loginResult.getAccessToken();
             token = accessToken.getToken();
             Toast.makeText(getActivity(), "Accesstoken = " + token, Toast.LENGTH_SHORT).show();
             Profile profile = Profile.getCurrentProfile();
             DisplayWelcomeMessage(profile, token);
+
+            GraphRequest request = GraphRequest.newMeRequest(
+                    loginResult.getAccessToken(),
+                    new GraphRequest.GraphJSONObjectCallback() {
+                        @Override
+                        public void onCompleted(
+                                JSONObject object,
+                                GraphResponse response) {
+                            // Application code
+                            Log.v("LoginActivity", response.toString());
+                            Toast.makeText(getActivity(), "response: " + response.toString(), Toast.LENGTH_SHORT).show();
+                        }
+                    });
+
+            Bundle parameters = new Bundle();
+            parameters.putString("fields", "id,name,email,gender, birthday,likes");
+            request.setParameters(parameters);
+            request.executeAsync();
+
+
         }
 
         @Override
         public void onCancel() {
             Toast.makeText(getActivity(), "Error on cancel", Toast.LENGTH_SHORT).show();
+            Log.v("LoginActivity", "cancel");
         }
 
 
         @Override
         public void onError(FacebookException e) {
             Toast.makeText(getActivity(), "Error", Toast.LENGTH_SHORT).show();
+            Log.v("LoginActivity", e.getCause().toString());
         }
     };
 
@@ -94,8 +124,10 @@ public class MainFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         LoginButton loginButton = (LoginButton) view.findViewById(R.id.login_button);
         mtextDetial = (TextView) view.findViewById(R.id.textView);
-        loginButton.setReadPermissions("user_friends");
+
+        loginButton.setReadPermissions(Arrays.asList("user_friends, email, user_likes, user_birthday"));
         loginButton.setFragment(this);
+
         loginButton.registerCallback(mCallbackManager, mCallBack);
     }
 
